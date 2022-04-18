@@ -4,15 +4,16 @@ namespace App\Services;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use App\Models\Postimage;
-
+use App\Models\images;
+use App\Interfaces\ImageStoreInterface;
 
 class ImagenStoreService implements ImageStoreInterface
-{
+{    
+    private $storePath;
 
-    public function __construct(Storage $storage)
-    {
-        $this->storage = $storage;        
+    public function __construct()
+    {        
+        $this->storePath = 'public/profile_images';
     }
 
     private function getUniqueFileName($data)
@@ -21,86 +22,66 @@ class ImagenStoreService implements ImageStoreInterface
         $extension = $data->getClientOriginalExtension();
         return "$uniqueId.$extension";
     }
-
-    /*
-    private function uploadFileS3($fullPath, StoreImageRequest $cv)
-    {
-        $fileContents = file_get_contents($cv);
-        $this->storage->disk('s3')->put($fullPath, $fileContents);
-        return $this->storage->disk('s3')->exists($fullPath);
-    } 
-    */
     
-    private function uploadFile($filenametostore, $image)
-    {
-        $path = $this->storage->putFileAs(
-            'public/profile_images', $filenametostore);
+    private function uploadFile($path, $filenametostore, $image)
+    {        
+        $path = $image->storeAs($path, $filenametostore);
 
-        $this->storage->putFileAs(
-            'public/profile_images/thumbnail', $filenametostore);
-
-        //$image->file('profile_image')->storeAs('public/profile_images/thumbnail', $filenametostore);  
-        return $this->storage->disk('s3')->exists($fullPath);
+        $paththumbnail = $image->storeAs($path.'/thumbnail', $filenametostore);    
+        
+        return $path && $paththumbnail;
     }
 
-    public function resize($path, $filenametostore)
-    {
-        //$thumbnailpath = public_path('storage/profile_images/thumbnail/'.$filenametostore);
-        $thumbnailpath = public_path($path.$filenametostore);
+    private function resize($path, $filenametostore)
+    {        
+        $thumbnailpath = public_path($path.'/thumbnail/'.$filenametostore);
+
         $img = Image::make($thumbnailpath)->resize(400, 150, function($constraint) {
             $constraint->aspectRatio();
         });
+
         $img->save($thumbnailpath);
         
         return true;        
     }
 
-    protected function store($uploader, $owner, StoreImageRequest $imageData) {        
-     
+    protected function upload($file, $owner) {              
+
+            $fileName = $this->getUniqueFileName($file);
+            
+            $fullPath = $this->storePath."/".$owner."/";            
             //Upload File
-            $this->uploadFile($imageData);
-     
+            $successfulUpload = $this->uploadFile($fullPath, $fileName, $file);
+           
             //Resize image here
-            $info = $this->resize($filenametostore);
+            if ($successfulUpload){
 
-            $data= new Postimage();
+                $this->resize($fullPath, $fileName);           
 
-            if($request->file('image')){
-                $file= $request->file('image');
-                $filename= date('YmdHi').$file->getClientOriginalName();
-                $file-> move(public_path('public/Image'), $filename);
-                $data['image']= $filename;
+                return $fileName;
             }
-            $data->save();
+            else 
+              return null;    
+    }
 
+    public function store(StoreImageRequest $request, $iddoc){
 
-            $fileName = $this->getUniqueFileName($imageData);
+        $file = $request->file('image');
 
-            if ($owner)
-                $fullPath = "cv/$owner/$fileName";
-            else
-                $fullPath = "cv/anonymous/$fileName";
+        $successfulUpload = $this->upload($file, $iddoc);
 
-            $successfulUpload = $this->uploadFile($fullPath, $data);
+        $saved = false;
 
-            $saved = false;
             if ($successfulUpload) {
-                $text = $this->getTextFromDocument($data);
-
-                if ($text) {
-                    // store the resume text in the db
-                    $resume  = new Resume();
-                    $resume->owner_id = $owner; // anonymous cv owner or user applicant id
-                    $resume->uploader_id = $uploader; // admin id or user applicant id
-                    $resume->file_name = $fileName; // contains the extension
-                    $resume->content = $text;
-                    $saved = $resume->save();
-                }
+                
+                $data= new Postimage();                                   
+                
+                $data['image'] = $fileName;
+            
+                $data->save();
             }
 
             return $saved;
-            
-        
 
     }
 

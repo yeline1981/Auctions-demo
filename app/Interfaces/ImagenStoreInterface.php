@@ -1,8 +1,8 @@
 <?php namespace App\Interfaces;
 
-use App\User;
+use App\Http\Requests\StoreImageRequest;
 
 interface ImageStoreInterface
 {
-    public function store($uploader, $owner, StoreImageRequest $file);
+    public function store(StoreImageRequest $file);
 }

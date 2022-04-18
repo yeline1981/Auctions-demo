@@ -24,7 +24,8 @@ class StoreImageRequest extends FormRequest
     public function rules()
     {
         return [
-            'data' => 'required|image'
+           'data' => 'required|file|image|mimes:jpeg,png,gif,jpg|max:4096',
+           'id_lote' => 'required|numeric'
         ];
     }
 }

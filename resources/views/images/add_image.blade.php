@@ -1,4 +1,8 @@
+@extends('layouts.app')
+@section('content')
+
 <div class="container">
+  <div class="container">
     <form method="post" action="{{ route('images.store') }}" 
           enctype="multipart/form-data">
       @csrf
@@ -12,3 +16,8 @@
       </div>
     </form>
   </div>
+</div>
+
+@endsection
+
+

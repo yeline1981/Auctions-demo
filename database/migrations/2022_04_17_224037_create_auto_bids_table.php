@@ -13,11 +13,15 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::create('postimages', function (Blueprint $table) {
+        Schema::create('auto_bids', function (Blueprint $table) {
             $table->id();
-            $table->string('image')->nullable();
-            $table->integer('created_by')->nullable();
-            $table->integer('updated_by')->nullable();
+            $table->unsignedBigInteger('user_id');
+            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
+
+            $table->unsignedBigInteger('lot_id')->unique();
+            $table->foreign('lot_id')->references('id')->on('lots')->onDelete('cascade');           
+
+            $table->unique(['lot_id', 'user_id']);
             $table->timestamps();
         });
     }
@@ -29,6 +33,6 @@ return new class extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('postimages');
+        Schema::dropIfExists('auto_bids');
     }
 };
